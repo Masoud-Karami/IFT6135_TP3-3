@@ -155,7 +155,7 @@ class VAE(nn.Module):
         logvar : [128, z_dim] variance matrix
         Returns
         -------
-        During training random sample from the learned ZDIMS-dimensional
+        During training random sample from the learned z_dim-dimensional
         normal distribution; during inference its mean.
         """
     def reparameterize(self, mu, logvar):
