@@ -40,7 +40,7 @@ learning_rate = 31e-4
 image_size = 784
 h_dim = 400
 z_dim = 20
-num_epochs = 2
+num_epochs = 20
 
 
 #%%
