@@ -175,7 +175,7 @@ def loss_function(x_reconst, x, mu, logvar):
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     # Normalise by same number of elements as in reconstruction
     # KLD /= x.view(-1, image_size).data.shape[0] * image_size
-    return bce + KLD
+    return -(bce + KLD)
 #%%
 
 # ----------
