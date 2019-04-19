@@ -175,7 +175,7 @@ def loss_function(x_reconst, x, mu, logvar):
     KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     # Normalise by same number of elements as in reconstruction
     # KLD /= x.view(-1, image_size).data.shape[0] * image_size
-    return -(bce + KLD)
+    return bce + KLD
 #%%
 
 # ----------
@@ -196,11 +196,11 @@ def train(epoch):
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t Loss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset), 100. *
-                batch_idx / len(train_loader), loss.item() / len(data)
+                batch_idx / len(train_loader), -loss.item() / len(data)
             ))
 
     print('====> Epoch: {} Average loss: {:.4f}'.format(
-        epoch, train_loss / len(train_loader.dataset)))
+        epoch, -train_loss / len(train_loader.dataset)))
 
 #%%
 
@@ -229,7 +229,7 @@ def test(epoch):
             
             
     test_loss /= len(valid_loader.dataset)
-    print('====> Test set loss: {:.4f}'.format(test_loss))
+    print('====> Test set loss: {:.4f}'.format(-test_loss))
         
 #%%    
 if __name__ == "__main__":
