@@ -29,9 +29,13 @@ import torch.nn as nn
 from torch import cuda
 import torch.utils.data
 from torch import optim, autograd
+from torch.nn import functional as F
 import torchvision
-import numpy as np
 from torch.utils.data import dataset
+from torchvision import datasets, transforms
+from torchvision.utils import save_image
+import numpy as np
+import matplotlib.pyplot as plt
 
 #%%
 parser = argparse.ArgumentParser(description='TP3 #3 PyTorch VAE for SVHN dataset')
@@ -89,7 +93,16 @@ def get_data_loader(dataset_location, batch_size):
         batch_size=batch_size,
     )
 
-    return trainloader, validloader, testloader                   
+    return trainloader, validloader, testloader 
+                    
+                    
+#%%
+def imshow(img):
+    img = 0.5*(img + 1)
+    npimg = img.numpy()
+    # npimg = (255*npimg).astype(np.uint8) # to be a int in (0,...,255)
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()                 
                     
 #%% 
 class View(nn.Module):
@@ -221,8 +234,14 @@ if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print(f"Running on {device}")
     args.device = device
-    train, valid, test = get_data_loader("svhn", 32)
-    model = VAE(batch_size = args.batch_size, latent_dim = args.latent_dim)                
+    train, valid, test = get_data_loader("svhn", batch_size = 64)
+    model = VAE(batch_size = args.batch_size, latent_dim = args.latent_dim)   
+    # show images
+    imshow(torchvision.utils.make_grid(images))
+    dataiter = iter(train)
+    images, labels = dataiter.next()
+    print( labels[0] )
+
     if parser.parse_args().s_true:
         train_model(model, train, valid, args.save_path)
     else:
