@@ -69,18 +69,72 @@ def extract_features(classifier, data_loader):
             for i in range(h.shape[0]):
                 yield h[i]
 
-
+#%%
 def calculate_fid_score(sample_feature_iterator,
                         testset_feature_iterator):
     """
-    To be implemented by you!
+        To be implemented by you!
+        Code adapted from https://github.com/bioinf-jku/TTUR   
+        https://github.com/bioinf-jku?utf8=%E2%9C%93&q=&type=&language=
+        
+        to use PyTorch instead
+        of Tensorflow
     """
+    
+    """
+        Calculates the Frechet Inception Distance (FID) to evalulate GANs
+        The FID metric calculates the distance between two distributions of images.
+        Typically, we have summary statistics (mean & covariance matrix) of one
+        of these distributions, while the 2nd distribution is given by a GAN.
+        When run as a stand-alone program, it compares the distribution of
+        images that are stored as PNG/JPEG at a specified location with a
+        distribution given by summary statistics (in pickle format).
+        The FID is calculated by assuming that X_1 and X_2 are the activations of
+        the pool_3 layer of the inception net for generated samples and real world
+        samples respectively.
+    """
+    
     raise NotImplementedError(
         "TO BE IMPLEMENTED."
         "Part of Assignment 3 Quantitative Evaluations"
     )
+    mu_q = torch.zeros(512)
+    sm_q = torch.zeros(512, 512)
+    nb_batches = 0
+    for i, feature in enumerate(sample_feature_iterator):
+        feature = torch.from_numpy(feature.astype('float32'))
+        nb_batches = i + 1
+        mu_q += feature
+        sm_q += torch.matmul(feature.view(512, 1), feature.view(1, 512))
 
+    # get the first and second moment estimates of the distribution
+    mu_q /= nb_batches
+    sm_q /= nb_batches
 
+    # get sigma for q
+    sigma_q = sm_q - torch.matmul(mu_q.view(512, 1), mu_q.view(1, 512))
+
+    # do the same for p
+    mu_p = torch.zeros_like(mu_q)
+    sm_p = torch.zeros_like(sm_q)
+    nb_batches = 0
+    for i, feature in enumerate(testset_feature_iterator):
+        feature = torch.from_numpy(feature.astype('float32'))
+        nb_batches = i + 1
+        mu_p += feature
+        sm_p += torch.matmul(feature.view(512, 1), feature.view(1, 512))
+
+    mu_p /= nb_batches
+    sm_p /= nb_batches
+
+    sigma_p = sm_p - torch.matmul(mu_p.view(512, 1), mu_p.view(1, 512))
+
+    # compute the FID score
+    fid = torch.norm(mu_q - mu_p) ** 2. + torch.trace(sigma_q + sigma_p -2 * torch.matmul(sigma_p, sigma_q) ** 2.)
+
+    return fid.item()
+
+#%%
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Score a directory of images with the FID score.')
