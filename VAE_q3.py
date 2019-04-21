@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 
 #%%
 parser = argparse.ArgumentParser(description='TP3 #3 PyTorch VAE for SVHN dataset')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',help='input batch size for training (default: 128)')
+parser.add_argument('--batch-size', type=int, default=64, metavar='N',help='input batch size for training (default: 64)')
 parser.add_argument('--latent_dim', type=int, default=100, metavar='N',help='number of epochs to train (default: 100)')
 # parser.add_argument('--no-cuda', action='store_true', default=False,help='disables CUDA training')
 # parser.add_argument('--logvar', type=int, default=10, metavar='N',help='how many batches to wait before logging training status')
@@ -173,10 +173,11 @@ class VAE(nn.Module):
         convencoder = self.convencoder(x)
         mu, logvar = convencoder[:, :self.latent_dim], convencoder[:, self.latent_dim:]
         z = torch.randn_like(mu, device = args.device)
-        f_x = mu + torch.exp(logvar) * z
-        decode_z = self.convdecoder(f_x)
+        x_hat = mu + torch.exp(logvar) * z
+        decode_z = self.convdecoder(x_hat)
         return mu, logvar, decode_z
 
+                                        
 #%% 
 def kl_div(mu, logvar):
     return 0.5 * (-1. - 2.*logvar + torch.exp(logvar)**2. + mu**2.).sum(dim=1)
@@ -217,8 +218,8 @@ def train_model(model, train, valid, save_path):
         nb_batches = 0
         for batch, i in valid:
             nb_batches += 1
-            mu, log_sigma, decode_z = model(batch)
-            kl = kl_div(mu, log_sigma)
+            mu, logvar, decode_z = model(batch)
+            kl = kl_div(mu, logvar)
             logpx_z = log_like(valid.view(-1, 3*32*32), decode_z.view(-1, 3*32*32))
             valid_elbo += (logpx_z - kl).mean()
         valid_elbo /= nb_batches
@@ -231,7 +232,7 @@ def train_model(model, train, valid, save_path):
 #%%        
 if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    print(f"Running on {device}")
+    print("Let's use {}".format(device))
     args.device = device
     train, valid, test = get_data_loader("svhn", batch_size = 64)
     model = VAE(batch_size = args.batch_size, latent_dim = args.latent_dim)   
