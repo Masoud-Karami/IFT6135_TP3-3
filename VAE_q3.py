@@ -18,7 +18,6 @@ References:
 # https://github.com/pytorch/examples/blob/master/vae/main.py
 # https://www.groundai.com/project/isolating-sources-of-disentanglement-in-variational-autoencoders/
 # https://arogozhnikov.github.io/einops/pytorch-examples.html
-# pip install torchsummary
 
 # Note   :    https://www.cs.toronto.edu/~lczhang/360/lec/w03/convnet.html
 #%%
