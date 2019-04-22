@@ -36,20 +36,8 @@ from torchvision.utils import save_image
 import numpy as np
 import matplotlib.pyplot as plt
 
-#%%
-parser = argparse.ArgumentParser(description='TP3 #3 PyTorch VAE for SVHN dataset')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',help='input batch size for training (default: 64)')
-parser.add_argument('--latent_dim', type=int, default=100, metavar='N',help='number of epochs to train (default: 100)')
-# parser.add_argument('--no-cuda', action='store_true', default=False,help='disables CUDA training')
-# parser.add_argument('--logvar', type=int, default=10, metavar='N',help='how many batches to wait before logging training status')
-parser.add_argument("--sample_dir", type=str, default="samples", help="Directory containing samples for"
-parser.add_argument("--save_path", type=str, default="VAE_q3.pt")                                                                      
-parser.add_argument("--load_path", type=str, default="VAE_q3.pt")
-parser.add_argument("-s_true", action="store_true", help="Flag to specify if we train the model")
 
-# https://discuss.pytorch.org/t/text-autoencoder-nan-loss-after-first-batch/22730
-args = parser.parse_args()
-args.device = torch.device("cuda") if cuda.is_available() else torch.device('cpu')
+batch_size = 64
 
 #%%    
 image_transform = transforms.Compose([
@@ -71,19 +59,19 @@ def get_data_loader(dataset_location, batch_size):
         [trainset_size, len(trainvalid) - trainset_size]
     )
 
-    trainloader = torch.utils.data.DataLoader(
+    train = torch.utils.data.DataLoader(
         trainset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=2
     )
 
-    validloader = torch.utils.data.DataLoader(
+    valid = torch.utils.data.DataLoader(
         validset,
         batch_size=batch_size,
     )
 
-    testloader = torch.utils.data.DataLoader(
+    test = torch.utils.data.DataLoader(
         torchvision.datasets.SVHN(
             dataset_location, split='test',
             download=True,
@@ -92,9 +80,50 @@ def get_data_loader(dataset_location, batch_size):
         batch_size=batch_size,
     )
 
-    return trainloader, validloader, testloader 
-                    
-                    
+    return train, valid, test
+
+#%%
+
+def get_data_loader_1(dataset_location, batch_size):
+    trainvalid = torchvision.datasets.SVHN(
+        dataset_location, split='train',
+        download=True,
+        transform=image_transform
+    )
+
+    trainset_size = int(len(trainvalid) * 0.9)
+    trainset, validset = dataset.random_split(
+        trainvalid,
+        [trainset_size, len(trainvalid) - trainset_size]
+    )
+
+    train = torch.utils.data.DataLoader(
+        trainset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=2
+    )
+
+    valid = torch.utils.data.DataLoader(
+        validset,
+        batch_size=batch_size,
+    )
+
+    test = torch.utils.data.DataLoader(
+        torchvision.datasets.SVHN(
+            dataset_location, split='test',
+            download=True,
+            transform=image_transform_1
+        ),
+        batch_size=batch_size,
+    )
+
+    return train, valid, test
+
+image_transform_1 = transforms.Compose([
+    transforms.ToTensor()
+])
+
 #%%
 def imshow(img):
     img = 0.5*(img + 1)
@@ -119,7 +148,7 @@ def forward(self, x):
 # https://discuss.pytorch.org/t/text-autoencoder-nan-loss-after-first-batch/22730
                     
 class VAE(nn.Module):
-    def __init__(self, batch_size, latent_dim=100):
+    def __init__(self, latent_dim=100):
         super(VAE, self).__init__()
 
         self.batch_size = batch_size
@@ -179,81 +208,130 @@ class VAE(nn.Module):
 
                                         
 #%% 
-def kl_div(mu, logvar):
-    return 0.5 * (-1. - 2.*logvar + torch.exp(logvar)**2. + mu**2.).sum(dim=1)
+#def kl_div(mu, logvar):
+#    kl_loss = 0.5 * torch.sum(-1 - 2*logvar.log() + mu**2 + logvar**2, dim=-1)
+#    return kl_loss
+#
+#
+#def log_like(x, x_):
+#    k = x.size()[1]
+#    log_loss = -k/2 * torch.log(2 * np.pi * torch.ones(1)) -0.5 * ((x - x_)**2.).mean(dim=1)
+#    return log_loss
 
+def ELBO(output, target, mu, logvar):
+    elbo = -torch.nn.functional.mse_loss(output, target, reduction='sum')
+    elbo += 0.5 * torch.sum(1 + logvar - mu.pow(2) - torch.exp(logvar))
+    return elbo / output.size(0)
 
-def log_like(x, x_):
-    k = x.size()[1]
-    return -k/2 * torch.log(2 * np.pi * torch.ones(1)) -0.5 * ((x - x_)**2.).mean(dim=1)
-
-
-def train_model(model, train, valid, save_path):
-    adam = optim.Adam(model.parameters(), lr=3e-4)
-    
-    for epoch in range(20):
-        for batch, i in train:
-            # put batch on device
-            batch = batch.to(args.device)
-
-            # obtain the parameters from the encoder and compute KL divergence
-            mu, logvar, decode_z = model(batch)
-            kl = kl_div(mu, logvar)
-
-            # compute the reconstruction loss
-            logpx_z = log_like(batch.view(-1, 3*32*32), decode_z.view(-1, 3*32*32))
-
-            # combine the two loss terms and compute gradients
-            elbo = (logpx_z - kl).mean()
-
-            # maximize the elbo i.e. minimize - elbo
-            autograd.backward([-elbo])
-
-            # Update the parameters and zero the gradients for the next mini-batch
-            adam.step()
-            adam.zero_grad()
-
-        # compute the loss for the validation set
-        valid_elbo = torch.zeros(1)
-        nb_batches = 0
-        for batch, i in valid:
-            nb_batches += 1
-            mu, logvar, decode_z = model(batch)
-            kl = kl_div(mu, logvar)
-            logpx_z = log_like(valid.view(-1, 3*32*32), decode_z.view(-1, 3*32*32))
-            valid_elbo += (logpx_z - kl).mean()
-        valid_elbo /= nb_batches
-        print("After epoch {} the validation loss is: ".format(epoch+1), valid_elbo.item())
-
-    # save the model to be used later
-    torch.save(model.state_dict(), save_path)        
 # https://www.groundai.com/project/isolating-sources-of-disentanglement-in-variational-autoencoders/
-                    
+#%%
+def visual_samples(vae, dimensions, device, svhn_loader):
+    z = torch.randn(64, dimensions, device = device)
+    generated = vae.convdecoder(z)
+    torchvision.utils.save_image(generated, 'images/vae/3_1_VAE-generated.png', normalize=False)
+    
+#%%
+def disentangled_representation(vae, dimensions, device, epsilon = 3):
+    z = torch.randn(dimensions, device = device)
+    z = z.repeat(dimensions+1, 1)
+    for i, sample in enumerate(z[1:]):
+        sample[i] += epsilon
+
+    generated = vae.convdecoder(z)
+    torchvision.utils.save_image(generated, 'images/vae/3_2positive_eps.png', normalize=False)
+    epsilon = -2*epsilon
+    for i, sample in enumerate(z[1:]):
+        sample[i] += epsilon
+
+    generated = vae.convdecoder(z)
+    torchvision.utils.save_image(generated, 'images/vae/3_2negative_eps.png', normalize=False)
+
+#%%
+    
+def interpolation(vae, dimensions, device):
+    # Interpolate in the latent space between z_0 and z_1
+    z_0 = torch.randn(1,dimensions, device=device)
+    z_1 = torch.randn(1,dimensions, device=device)
+    z_a = torch.zeros([11,dimensions], device=device)
+
+    for i in range(11):
+        a = i/10
+        z_a[i] = a*z_0 + (1-a)*z_1
+
+    generated = vae.convdecoder(z_a)
+    torchvision.utils.save_image(generated, 'images/vae/3_3latent.png', normalize=False)
+    
+    # Interpolate in the data space between x_0 and x_1
+    x_0 = vae.convdecoder(z_0)
+    x_1 = vae.convdecoder(z_1)
+    x_a = torch.zeros(11,x_0.size()[1],x_0.size()[2],x_0.size()[3], device = device)
+
+    for i in range(11):
+        a = i/10
+        x_a[i] = a*x_0 + (1-a)*x_1
+
+    torchvision.utils.save_image(x_a, 'images/vae/3_3data.png', normalize=False)   
+    
+    
+#%%
+def save_images(img_dir: str):
+    import os
+    vae = VAE()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    vae.load_state_dict(torch.load('VAE_q#3_save.pth', map_location=device))
+    vae = vae.to(device)
+    vae.eval()
+    
+    for p in vae.parameters():
+        p.requires_grad = False
+        os.makedirs(f"{img_dir}/img/", exist_ok=True)
+    for i in range(10):
+        print(i)
+        latents = torch.randn(100, 100, device=device)
+        images = vae.decoder(latents)
+        for j, image in enumerate(images):
+            filename = f"images/vae/fid/img/{i * 100 + j:03d}.png"
+            torchvision.utils.save_image(image, filename, normalize=True)
+            
 #%%        
 if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print("Let's use {}".format(device))
-    args.device = device
+    vae = VAE()
+    vae = vae.to(device)
+    running_loss = 0
+    optimizer = optim.Adam(vae.parameters(), lr=3e-4)
     train, valid, test = get_data_loader("svhn", batch_size = 64)
-    model = VAE(batch_size = args.batch_size, latent_dim = args.latent_dim)   
-    # show images
-    imshow(torchvision.utils.make_grid(images))
-    dataiter = iter(train)
-    images, labels = dataiter.next()
-    print( labels[0] )
+    try: 
+        vae.load_state_dict(torch.load('VAE_q#3_save.pth', map_location=device))
+        print('----Using saved model----')
+    except FileNotFoundError:
+        for epoch in range(20):
+            print(f"------- EPOCH {epoch} --------")
+            for i, (x, _) in enumerate(train):
+                vae.train()
+                optimizer.zero_grad()
+                x = x.to(device)
+                y, mu, logvar = vae(x)
+                loss = -ELBO(y, x, mu, logvar)
+                running_loss += loss
+                loss.backward()
+                optimizer.step()
+                if(i%10 == 0):
+                    visual_samples(vae, 100, device, test)
 
-    if parser.parse_args().s_true:
-        train_model(model, train, valid, args.save_path)
-    else:
-        model.load_state_dict(torch.load(args.load_path))
-        model.eval()                
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
+                if (i + 1) % 100 == 0:
+                    print(f"Training example {i + 1} / {len(train)}. Loss: {running_loss}")
+                    running_loss = 0
 
+        torch.save(vae.state_dict(), 'VAE_q#3_save.pth')
+
+    dimensions = 100
+    
+    
+    visual_samples(vae, dimensions, device, test)
+    disentangled_representation(vae, dimensions, device, epsilon=10)
+    interpolation(vae, dimensions, device)
+    
+    img_dir = "images/vae/fid"
+    save_images(img_dir)
