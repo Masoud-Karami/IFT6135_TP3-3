@@ -100,16 +100,16 @@ def calculate_fid_score(sample_feature_iterator,
     )
     mu_q = torch.zeros(512)
     sm_q = torch.zeros(512, 512)
-    nb_batches = 0
+    samples = 0
     for i, feature in enumerate(sample_feature_iterator):
         feature = torch.from_numpy(feature.astype('float32'))
-        nb_batches = i + 1
+        samples = i + 1
         mu_q += feature
         sm_q += torch.matmul(feature.view(512, 1), feature.view(1, 512))
 
     # get the first and second moment estimates of the distribution
-    mu_q /= nb_batches
-    sm_q /= nb_batches
+    mu_q /= samples
+    sm_q /= samples
 
     # get sigma for q
     sigma_q = sm_q - torch.matmul(mu_q.view(512, 1), mu_q.view(1, 512))
@@ -117,15 +117,15 @@ def calculate_fid_score(sample_feature_iterator,
     # do the same for p
     mu_p = torch.zeros_like(mu_q)
     sm_p = torch.zeros_like(sm_q)
-    nb_batches = 0
+    samples = 0
     for i, feature in enumerate(testset_feature_iterator):
         feature = torch.from_numpy(feature.astype('float32'))
-        nb_batches = i + 1
+        samples = i + 1
         mu_p += feature
         sm_p += torch.matmul(feature.view(512, 1), feature.view(1, 512))
 
-    mu_p /= nb_batches
-    sm_p /= nb_batches
+    mu_p /= samples
+    sm_p /= samples
 
     sigma_p = sm_p - torch.matmul(mu_p.view(512, 1), mu_p.view(1, 512))
 
