@@ -67,6 +67,7 @@ image_transform = transforms.Compose([
 ])
 
 
+
 #%%     
 class Generator(nn.Module):
     """ Generator. Input is noise and latent variables, output is a generated
