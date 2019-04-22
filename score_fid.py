@@ -94,9 +94,9 @@ def calculate_fid_score(sample_feature_iterator,
         samples respectively.
     """
     
-    raise NotImplementedError(
-        "TO BE IMPLEMENTED."
-        "Part of Assignment 3 Quantitative Evaluations"
+    #raise NotImplementedError(
+    #    "TO BE IMPLEMENTED."
+    #    "Part of Assignment 3 Quantitative Evaluations"
     )
     mu_q = torch.zeros(512)
     sm_q = torch.zeros(512, 512)
