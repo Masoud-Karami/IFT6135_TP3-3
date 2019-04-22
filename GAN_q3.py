@@ -200,7 +200,7 @@ def interpolation(G, dimensions, device):
         z_a[i] = a*z_0 + (1-a)*z_1
 
     generated = G.generator(z_a)
-    torchvision.utils.save_image(generated, 'images/gan/latent.png', normalize = False)
+    torchvision.utils.save_image(generated, 'images/GAN/latent.png', normalize = False)
     
     # Interpolate in the data space between x_0 and x_1
     x_0 = G.generator(z_0)
@@ -211,7 +211,7 @@ def interpolation(G, dimensions, device):
         a = i/10
         x_a[i] = torch.lerp(x_0, x_1, a)
 
-    torchvision.utils.save_image(x_a, 'images/gan/data.png', normalize = False)
+    torchvision.utils.save_image(x_a, 'images/GAN/data.png', normalize = False)
 
 
 def save_images(img_dir: str):
@@ -321,5 +321,5 @@ if __name__ == '__main__':
     #3_3 Interpolation
     interpolation(G, dimensions, device)
 
-    img_dir = "images/gan/fid"
+    img_dir = "images/GAN/fid"
     save_images(img_dir)
