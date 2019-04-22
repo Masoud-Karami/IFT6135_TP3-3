@@ -97,42 +97,17 @@ def calculate_fid_score(sample_feature_iterator,
     #raise NotImplementedError(
     #    "TO BE IMPLEMENTED."
     #    "Part of Assignment 3 Quantitative Evaluations"
-    )
-    mu_q = torch.zeros(512)
-    sm_q = torch.zeros(512, 512)
-    samples = 0
-    for i, feature in enumerate(sample_feature_iterator):
-        feature = torch.from_numpy(feature.astype('float32'))
-        samples = i + 1
-        mu_q += feature
-        sm_q += torch.matmul(feature.view(512, 1), feature.view(1, 512))
-
-    # get the first and second moment estimates of the distribution
-    mu_q /= samples
-    sm_q /= samples
-
-    # get sigma for q
-    sigma_q = sm_q - torch.matmul(mu_q.view(512, 1), mu_q.view(1, 512))
-
-    # do the same for p
-    mu_p = torch.zeros_like(mu_q)
-    sm_p = torch.zeros_like(sm_q)
-    samples = 0
-    for i, feature in enumerate(testset_feature_iterator):
-        feature = torch.from_numpy(feature.astype('float32'))
-        samples = i + 1
-        mu_p += feature
-        sm_p += torch.matmul(feature.view(512, 1), feature.view(1, 512))
-
-    mu_p /= samples
-    sm_p /= samples
-
-    sigma_p = sm_p - torch.matmul(mu_p.view(512, 1), mu_p.view(1, 512))
-
-    # compute the FID score
-    fid = torch.norm(mu_q - mu_p) ** 2. + torch.trace(sigma_q + sigma_p -2 * torch.matmul(sigma_p, sigma_q) ** 2.)
-
-    return fid.item()
+    #)
+    x = np.asarray(list(islice(1000, sample_feature_iterator)))
+    y = np.asarray(list(islice(1000, testset_feature_iterator)))
+    mu_x = np.mean(x, axis=0)
+    mu_y = np.mean(y, axis=0)
+    sigma_x = np.cov(x, rowvar=False)
+    sigma_y = np.cov(y, rowvar=False)
+    MSE = np.dot((mu_x - mu_y),(mu_x - mu_y).T)
+    sigma = sigma_x + sigma_y - 2 * scipy.linalg.sqrtm(sigma_x * sigma_y)
+    FID = MSE + np.trace(sigma)
+    return FID
 
 #%%
 if __name__ == "__main__":
