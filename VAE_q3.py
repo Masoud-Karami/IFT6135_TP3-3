@@ -206,7 +206,7 @@ def ELBO(output, target, mu, logvar):
 def visual_samples(vae, dimensions, device, svhn_loader):
     z = torch.randn(64, dimensions, device = device)
     generated = vae.decoder(z)
-    torchvision.utils.save_image(generated, 'images/vae/3_1_VAE-generated.png', normalize=False)
+    torchvision.utils.save_image(generated, 'images/vae/3.1vae-generated.png', normalize=False)
     
 #%%
 def disentangled_representation(vae, dimensions, device, epsilon = 3):
@@ -302,7 +302,7 @@ if __name__ == "__main__":
                     print(f"Training example {i + 1} / {len(train)}. Loss: {running_loss}")
                     running_loss = 0
 
-        torch.save(vae.state_dict(), 'VAE_q#3_save.pth')
+        torch.save(vae.state_dict(), 'VAE_q3_save.pth')
 
     dimensions = 100
     
