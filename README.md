@@ -20,3 +20,5 @@ See the assignment repository IFT6135H19 assignment/assignment3
     - Generative Adversarial Networks (GANs)
     
 Evaluate GAN generation with Frechet Inception Distance (FID)
+
+N.B. For Q3, the .py files are there in case certain scripts need them, but the work was done in the ipynb files.
