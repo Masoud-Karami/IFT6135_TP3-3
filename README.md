@@ -2,7 +2,7 @@
 Assignment 3, Programming Part,
 Generative Models\
 Members:\
-# Masoud Karami\
+# Masoud Karami
 # Andrew Williams
 See the assignment repository IFT6135H19 assignment/assignment3
 1) Metric between two distributionsJensen Shannon divergence
