@@ -147,76 +147,54 @@ def forward(self, x):
 #%%                
 # https://discuss.pytorch.org/t/text-autoencoder-nan-loss-after-first-batch/22730
                     
-class VAE(nn.Module):
+#%% 
+class convencoder(nn.Module):
     def __init__(self, latent_dim=100):
-        super(VAE, self).__init__()
+        super(convencoder, self).__init__()
 
-        self.batch_size = batch_size
         self.latent_dim = latent_dim
 
-        self.convencoder = nn.Sequential(
-            # Layer 1
-            nn.Conv2d(3, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-
-            #  Layer 2
-            nn.Conv2d(128, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(),
-
-            # Layer 3
-            nn.Conv2d(256, 512, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(),
-
-            # Layer 4
-            View(self.batch_size, 4*4*512),
-            nn.Linear(4*4*512, 2*self.latent_dim)
+        self.conv = nn.Sequential(
+            nn.Conv2d(3, 32, kernel_size=3),
+            nn.ELU(),
+            nn.AvgPool2d(2, 2),
+            nn.Conv2d(32, 64, kernel_size=3),
+            nn.ELU(),
+            nn.AvgPool2d(kernel_size = 2, stride = 2),
+            nn.Conv2d(64, 256, kernel_size=6),
+            nn.ELU()
         )
 
-        self.convdecoder = nn.Sequential(
-            # Layer 1
-            nn.Linear(self.latent_dim, 4*4*512),
-            View(self.batch_size, 512, 4, 4),
-            nn.BatchNorm2d(512),
-            nn.LeakyReLU(),
-
-            # Layer 2
-            nn.ConvTranspose2d(512, 256, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(256),
-            nn.LeakyReLU(),
-
-            # Layer 3
-            nn.ConvTranspose2d(256, 128, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-
-            # Layer 4
-            nn.ConvTranspose2d(128, 3, kernel_size=4, stride=2, padding=1),
-            nn.LeakyReLU()
-        )
-
+        self.final = nn.Linear(256, self.latent_dim * 2)
 
     def forward(self, x):
-        convencoder = self.convencoder(x)
-        mu, logvar = convencoder[:, :self.latent_dim], convencoder[:, self.latent_dim:]
-        z = torch.randn_like(mu, device = args.device)
-        x_hat = mu + torch.exp(logvar) * z
-        decode_z = self.convdecoder(x_hat)
-        return mu, logvar, decode_z
-
-                                        
+        x = self.conv(x)
+        x = x.view(x.size(0), -1)
+        x = self.final(x)
+        # Return mu and logvar
+        return x[..., self.latent_dim:], x[..., :self.latent_dim]         
+  
 #%% 
-#def kl_div(mu, logvar):
-#    kl_loss = 0.5 * torch.sum(-1 - 2*logvar.log() + mu**2 + logvar**2, dim=-1)
-#    return kl_loss
-#
-#
-#def log_like(x, x_):
-#    k = x.size()[1]
-#    log_loss = -k/2 * torch.log(2 * np.pi * torch.ones(1)) -0.5 * ((x - x_)**2.).mean(dim=1)
-#    return log_loss
+class convdecoder(Generator): # call generator from GAN
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1, 1, 1)
+        x = self.main(x)
+        return x
+#%%
+class VAE(nn.Module):
+    def __init__(self):
+        super(VAE, self).__init__()
+
+        self.encoder = convencoder()
+        self.decoder = convdecoder()
+
+    def forward(self, x):
+        mu, logvar = self.encoder(x)
+#        mu, logvar = convencoder[:, :self.latent_dim], convencoder[:, self.latent_dim:]
+        std = torch.exp(logvar / 2)
+        z = mu + std * torch.randn_like(std)
+        return self.decoder(z), mu, logvar
 
 def ELBO(output, target, mu, logvar):
     elbo = -torch.nn.functional.mse_loss(output, target, reduction='sum')
@@ -227,7 +205,7 @@ def ELBO(output, target, mu, logvar):
 #%%
 def visual_samples(vae, dimensions, device, svhn_loader):
     z = torch.randn(64, dimensions, device = device)
-    generated = vae.convdecoder(z)
+    generated = vae.decoder(z)
     torchvision.utils.save_image(generated, 'images/vae/3_1_VAE-generated.png', normalize=False)
     
 #%%
@@ -237,13 +215,13 @@ def disentangled_representation(vae, dimensions, device, epsilon = 3):
     for i, sample in enumerate(z[1:]):
         sample[i] += epsilon
 
-    generated = vae.convdecoder(z)
+    generated = vae.decoder(z)
     torchvision.utils.save_image(generated, 'images/vae/3_2positive_eps.png', normalize=False)
     epsilon = -2*epsilon
     for i, sample in enumerate(z[1:]):
         sample[i] += epsilon
 
-    generated = vae.convdecoder(z)
+    generated = vae.decoder(z)
     torchvision.utils.save_image(generated, 'images/vae/3_2negative_eps.png', normalize=False)
 
 #%%
@@ -258,12 +236,12 @@ def interpolation(vae, dimensions, device):
         a = i/10
         z_a[i] = a*z_0 + (1-a)*z_1
 
-    generated = vae.convdecoder(z_a)
+    generated = vae.decoder(z_a)
     torchvision.utils.save_image(generated, 'images/vae/3_3latent.png', normalize=False)
     
     # Interpolate in the data space between x_0 and x_1
-    x_0 = vae.convdecoder(z_0)
-    x_1 = vae.convdecoder(z_1)
+    x_0 = vae.decoder(z_0)
+    x_1 = vae.decoder(z_1)
     x_a = torch.zeros(11,x_0.size()[1],x_0.size()[2],x_0.size()[3], device = device)
 
     for i in range(11):
@@ -278,7 +256,7 @@ def save_images(img_dir: str):
     import os
     vae = VAE()
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    vae.load_state_dict(torch.load('VAE_q#3_save.pth', map_location=device))
+    vae.load_state_dict(torch.load('VAE_q3_save.pth', map_location=device))
     vae = vae.to(device)
     vae.eval()
     
@@ -303,7 +281,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(vae.parameters(), lr=3e-4)
     train, valid, test = get_data_loader("svhn", batch_size = 64)
     try: 
-        vae.load_state_dict(torch.load('VAE_q#3_save.pth', map_location=device))
+        vae.load_state_dict(torch.load('VAE_q3_save.pth', map_location=device))
         print('----Using saved model----')
     except FileNotFoundError:
         for epoch in range(20):
