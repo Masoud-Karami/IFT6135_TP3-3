@@ -18,4 +18,5 @@ See the assignment repository IFT6135H19 assignment/assignment3
   - Generative models
     - Variational Auto-Encoders (VAE)
     - Generative Adversarial Networks (GANs)
-  Frechet Inception Distance (FID) used to evaluate GAN generation
+    
+Evaluate GAN generation with Frechet Inception Distance (FID)
