@@ -22,3 +22,10 @@ See the assignment repository IFT6135H19 assignment/assignment3
 Evaluate GAN generation with Frechet Inception Distance (FID)
 
 N.B. For Q3, the .py files are there in case certain scripts need them, but the work was done in the ipynb files.
+
+## Sources
+https://blog.smola.org/post/987977550/log-probabilities-semirings-and-floating-point
+http://bjlkeng.github.io/posts/importance-sampling-and-estimating-marginal-likelihood-in-variational-autoencoders/
+https://jaan.io/what-is-variational-autoencoder-vae-tutorial/
+https://github.com/altosaar/variational-autoencoder/blob/master/train_variational_autoencoder_pytorch.py
+https://github.com/bjlkeng/sandbox/blob/master/notebooks/vae-importance_sampling/vae-mnist-importance-sampling.ipynb
