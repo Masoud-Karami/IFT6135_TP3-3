@@ -207,16 +207,7 @@ class VAE(nn.Module):
         return mu, logvar, decode_z
 
                                         
-#%% 
-#def kl_div(mu, logvar):
-#    kl_loss = 0.5 * torch.sum(-1 - 2*logvar.log() + mu**2 + logvar**2, dim=-1)
-#    return kl_loss
-#
-#
-#def log_like(x, x_):
-#    k = x.size()[1]
-#    log_loss = -k/2 * torch.log(2 * np.pi * torch.ones(1)) -0.5 * ((x - x_)**2.).mean(dim=1)
-#    return log_loss
+#%%
 
 def ELBO(output, target, mu, logvar):
     elbo = -torch.nn.functional.mse_loss(output, target, reduction='sum')
