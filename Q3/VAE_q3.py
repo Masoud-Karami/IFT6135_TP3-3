@@ -217,7 +217,7 @@ def ELBO(output, target, mu, logvar):
 def visual_samples(vae, dimensions, device, svhn_loader):
     z = torch.randn(64, dimensions, device = device)
     generated = vae.convdecoder(z)
-    torchvision.utils.save_image(generated, 'images/vae/3_1_VAE-generated.png', normalize=True)
+    torchvision.utils.save_image(generated, 'images/vae/3_1_VAE-generated.png', normalize=False)
     
 #%%
 def disentangled_representation(vae, dimensions, device, epsilon = 3):
@@ -227,13 +227,13 @@ def disentangled_representation(vae, dimensions, device, epsilon = 3):
         sample[i] += epsilon
 
     generated = vae.convdecoder(z)
-    torchvision.utils.save_image(generated, 'images/vae/3_2positive_eps.png', normalize=True)
+    torchvision.utils.save_image(generated, 'images/vae/3_2positive_eps.png', normalize=False)
     epsilon = -2*epsilon
     for i, sample in enumerate(z[1:]):
         sample[i] += epsilon
 
     generated = vae.convdecoder(z)
-    torchvision.utils.save_image(generated, 'images/vae/3_2negative_eps.png', normalize=True)
+    torchvision.utils.save_image(generated, 'images/vae/3_2negative_eps.png', normalize=False)
 
 #%%
     
